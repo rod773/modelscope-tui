@@ -111,32 +111,44 @@ def run() -> None:
         messages.append({"role": "user", "content": cmd})
 
         while True:
-            try:
-                response = client.chat(messages, tools=editor.get_tool_definitions())
-            except ValueError as e:
-                console.print(f"\n[red]{e}[/red]")
-                break
-            except Exception as e:
-                console.print(f"\n[red]API error: {e}[/red]")
-                break
+            tool_call_cycle = len(messages) > 1 and any(m.get("role") == "tool" for m in messages[-3:])
+            status_text = "Applying tool results..." if tool_call_cycle else "Thinking..."
+
+            with console.status(status_text, spinner="dots"):
+                try:
+                    response = client.chat(messages, tools=editor.get_tool_definitions())
+                except ValueError as e:
+                    console.print(f"\n[red]{e}[/red]")
+                    break
+                except Exception as e:
+                    console.print(f"\n[red]API error: {e}[/red]")
+                    break
 
             choice = response["choices"][0]
             msg = choice["message"]
 
-            tool_calls = msg.get("tool_calls")
+            reasoning = msg.get("reasoning_content", "") or ""
+            if reasoning:
+                console.print("\n[dim italic]Thinking:[/dim italic]")
+                for line in reasoning.split("\n"):
+                    console.print(f"[dim italic]{line}[/dim italic]")
+
+            assistant_msg = {k: v for k, v in msg.items() if k != "reasoning_content"}
+
+            tool_calls = assistant_msg.get("tool_calls")
             if not tool_calls:
-                content = msg.get("content", "")
+                content = assistant_msg.get("content", "")
                 if content:
                     console.print("\n[bold green]Assistant:[/bold green]")
                     console.print(Markdown(content))
-                messages.append(msg)
+                messages.append(assistant_msg)
                 break
 
-            msg_content = msg.get("content", "")
+            msg_content = assistant_msg.get("content", "")
             if msg_content:
                 console.print(Markdown(msg_content))
 
-            messages.append(msg)
+            messages.append(assistant_msg)
 
             for tc in tool_calls:
                 fn = tc["function"]

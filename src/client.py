@@ -58,6 +58,13 @@ class ModelscopeClient:
                 f"Current base URL: {self.base_url}\n"
                 f"Full URL: {resp.url}"
             )
+        if resp.status_code == 405:
+            raise ValueError(
+                f"405 Method Not Allowed. The API endpoint may have changed or your message "
+                f"content may be too long.\n"
+                f"Current base URL: {self.base_url}\n"
+                f"Full URL: {resp.url}"
+            )
         resp.raise_for_status()
         return resp.json()
 
