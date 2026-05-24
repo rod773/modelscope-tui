@@ -23,8 +23,21 @@ SYSTEM_PROMPT = """You are an AI coding assistant. You have access to file tools
 - `list_files` — list directory contents
 
 When asked to create or modify code, use the appropriate tool.
-Explain what you are doing before executing tools.
-Work in the user's workspace."""
+Work in the user's workspace.
+
+## Response format for multi-step tasks
+
+When a task requires multiple steps, include a plan section in your response:
+
+```
+## Plan
+- [x] Completed step
+- [ ] Current step description
+- [ ] Future step
+```
+
+Mark the current step with `[ ]` and completed steps with `[x]`.
+Update the plan after each tool call so the user can see progress."""
 
 
 def run() -> None:
