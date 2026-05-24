@@ -1,0 +1,101 @@
+Create a Python project called "modelscope-tui" — a terminal AI coding assistant that uses Modelscope's API and can edit, create, and delete files like opencode does.
+
+## Project structure
+
+```
+modelscope-tui/
+├── .env                     # user config (API token, base URL, model, workspace)
+├── main.py                  # entry point: `python main.py` or `modelscope_tui` after pip install
+├── pyproject.toml           # packaging with console_scripts entry point
+├── requirements.txt         # dependencies
+├── run.ps1                  # convenience: `.\run.ps1`
+├── prompt.txt               # this file
+└── src/
+    ├── __init__.py           # empty
+    ├── config.py             # loads .env via python-dotenv
+    ├── client.py             # httpx-based Modelscope API client (OpenAI-compatible)
+    ├── editor.py             # file tools: read, write, edit, delete, list
+    └── tui.py                # prompt_toolkit + rich TUI with tool-calling loop
+```
+
+## .env variables
+
+```
+MODELSCOPE_API_TOKEN=ms-xxxxxxxxxxxx     # required, get at https://modelscope.ai/my-access-token
+MODELSCOPE_BASE_URL=https://api-inference.modelscope.ai/v1/  # default, .ai for international, .cn for China
+MODELSCOPE_MODEL=Qwen/Qwen2.5-72B-Instruct  # optional, defaults to this
+WORKSPACE_DIR=.                               # optional, defaults to cwd
+```
+
+## File details
+
+### pyproject.toml
+- Name: `modelscope-tui`, version `1.0.0`
+- Dependencies: python-dotenv, httpx, prompt-toolkit, rich
+- Entry point: `modelscope_tui = "src.tui:run"`
+- Package discovery: include `src*`
+
+### src/config.py
+- Calls `load_dotenv()` at module level to load `.env`
+- `MODELSCOPE_TOKEN_URL = "https://modelscope.ai/my-access-token"` (constant, used in error messages)
+- `get_api_token()` — reads `MODELSCOPE_API_TOKEN`, validates it starts with `ms-`, raises ValueError if missing/invalid
+- `get_base_url()` — reads `MODELSCOPE_BASE_URL` defaulting to `https://api-inference.modelscope.ai/v1/`, ensures trailing `/`
+- `get_model()` — reads `MODELSCOPE_MODEL` defaulting to `Qwen/Qwen2.5-72B-Instruct`
+- `get_workspace()` — reads `WORKSPACE_DIR` defaulting to `.`, returns resolved `Path`
+
+### src/client.py
+- `ModelscopeClient.__init__()` — gets token, base_url, model from config; creates `httpx.Client` with `Authorization: Bearer <token>` header and 120s timeout
+- `check_connection()` — sends a minimal chat request (1 token) and returns a diagnostic string with token preview, URL, model, HTTP status, and response body
+- `chat(messages, tools=None)` — POST to `chat/completions`; on 401, raises ValueError with the server's error message + link to get a new token; otherwise raises on HTTP errors and returns JSON
+- `chat_stream(messages, tools=None)` — same but with `stream: True`, yields parsed JSON chunks from SSE `data:` lines
+
+### src/editor.py
+- `FileEditor.__init__()` — sets workspace from config
+- `_resolve(path)` — resolves relative paths against workspace, returns absolute `Path`
+- `read_file(path)` — raises FileNotFoundError if missing, returns content as string
+- `write_file(path, content)` — creates parent dirs, writes file, returns summary with byte count
+- `edit_file(path, old_string, new_string)` — replaces exact text (single occurrence), raises ValueError if not found or multiple matches
+- `delete_file(path)` — deletes file or empty directory, raises FileNotFoundError
+- `list_files(path=".")` — lists directory contents with `/` suffix for dirs
+- `get_tool_definitions()` — returns OpenAI-compatible tool definitions for: read_file, write_file, edit_file, delete_file, list_files
+- `execute_tool(name, args)` — dispatches to the correct method via Python `match`
+
+### src/tui.py
+- Uses `prompt_toolkit.PromptSession` with `FileHistory(".chat_history")` and `rich.Console` for output
+- Starts by creating `ModelscopeClient` (catches ValueError for token issues) and `FileEditor`
+- Prints welcome panel with model name and workspace
+- Main loop:
+  - Empty input → skip
+  - `/exit` — quit
+  - `/check` — runs `client.check_connection()` and prints result
+  - `/help` — shows command list
+  - `/clear` — resets conversation history (keeps system prompt)
+  - `/tools` — lists available file tools
+  - `/model <name>` — updates `MODELSCOPE_MODEL` env var and client.model
+  - `/workspace <dir>` — updates `WORKSPACE_DIR` env var and editor.workspace
+  - Everything else → sent as user message to the AI
+- Tool-calling inner loop:
+  - Calls `client.chat()` with messages and tool definitions
+  - If no tool_calls in response → prints assistant message as Markdown, appends to history, breaks
+  - If tool_calls present → appends assistant message to history, executes each tool via `editor.execute_tool()`, appends tool results as messages, loops to let AI respond again
+- Error handling: ValueError shown in red for 401/auth issues, generic Exception shown in red for other API errors
+
+## How to run
+
+```bash
+pip install -e .
+modelscope_tui
+```
+
+Or without installing:
+```bash
+pip install -r requirements.txt
+python main.py
+```
+
+## Token setup
+1. Go to https://modelscope.ai/my-access-token
+2. Create a new token (long-term), copy it
+3. Add to `.env`: `MODELSCOPE_API_TOKEN=ms-<token>`
+4. The API base URL for international users is `https://api-inference.modelscope.ai/v1/` (for China use `.cn`)
+5. Your Modelscope account must be linked to Alibaba Cloud with real-name verification completed

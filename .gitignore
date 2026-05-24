@@ -1,0 +1,8 @@
+.env
+.chat_history
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+venv/
+*.egg/
