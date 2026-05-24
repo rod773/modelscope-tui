@@ -154,11 +154,11 @@ class FileEditor:
                 "type": "function",
                 "function": {
                     "name": "create_nextjs_project",
-                    "description": "Scaffold a Next.js 14 project with TypeScript and Tailwind CSS in the workspace",
+                    "description": "Scaffold a Next.js 14 project with TypeScript and Tailwind CSS. Use \".\" as project_name to create files in the current folder.",
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "project_name": {"type": "string", "description": "Directory name for the project"},
+                            "project_name": {"type": "string", "description": "Directory name, or \".\" to scaffold in current folder"},
                         },
                         "required": ["project_name"],
                     },

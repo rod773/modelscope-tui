@@ -3,11 +3,12 @@ from pathlib import Path
 
 
 def create_nextjs_project(base_dir: str, project_name: str) -> str:
-    dest = Path(base_dir) / project_name
-    if dest.exists():
+    dest = Path(base_dir) / project_name if project_name not in ("", ".") else Path(base_dir)
+    if dest.exists() and project_name not in ("", "."):
         raise FileExistsError(f"Directory '{dest}' already exists")
 
-    files = _get_project_files(project_name)
+    name = project_name if project_name not in ("", ".") else Path(base_dir).name
+    files = _get_project_files(name)
     for rel_path, content in files.items():
         full = dest / rel_path
         full.parent.mkdir(parents=True, exist_ok=True)

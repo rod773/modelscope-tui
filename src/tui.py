@@ -28,7 +28,7 @@ SYSTEM_PROMPT = """You are an AI coding assistant with access to these tools:
 - `create_nextjs_project` — scaffold a full Next.js 14 project with TypeScript + Tailwind (preferred over writing files manually)
 - `run_command` — execute shell commands (e.g. npm install, yarn add, npx, git, etc.)
 
-When asked to create a Next.js project, use `create_nextjs_project` then `run_command` to install dependencies.
+When asked to create a Next.js project, use `create_nextjs_project`. If the user says "inside this folder" or "in the current directory", use "." as the project_name. After scaffolding, use `run_command` to install dependencies.
 When asked to add packages, use `run_command` with yarn/npm/pnpm.
 Work in the user's workspace.
 
@@ -136,10 +136,11 @@ def run() -> None:
             try:
                 dest = create_nextjs_project(editor.workspace, name)
                 console.print(f"\n[bold green]Next.js project created at:[/bold green] {dest}")
-                console.print("\n[bold]To get started:[/bold]")
-                console.print(f"  cd {name}")
-                console.print("  npm install")
-                console.print("  npm run dev")
+                if name not in ("", "."):
+                    console.print("\n[bold]To get started:[/bold]")
+                    console.print(f"  cd {name}")
+                    console.print("  npm install")
+                    console.print("  npm run dev")
             except (FileExistsError, OSError) as e:
                 console.print(f"\n[red]Error: {e}[/red]")
             continue
