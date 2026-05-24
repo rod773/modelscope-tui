@@ -22,6 +22,7 @@ modelscope-tui/
     ├── config.py             # loads .env via python-dotenv (explicit path, override mode)
     ├── client.py             # httpx client for Modelscope API (handles 401, 404)
     ├── editor.py             # file tools (read/write/edit/delete/list)
+    ├── nextjs.py             # Next.js project scaffolding
     └── tui.py                # terminal UI with tool-calling loop
 ```
 
@@ -110,6 +111,7 @@ Once running, you chat with the AI just like any assistant. The AI has access to
 | `/clear` | Clear conversation history |
 | `/model <name>` | Switch to a different model (e.g. `Qwen/Qwen3-32B`) |
 | `/tools` | List available file tools |
+| `/create-nextjs [name]` | Scaffold a Next.js 14 project with TypeScript + Tailwind (default: `my-app`) |
 | `/workspace <dir>` | Change the working directory |
 | `/exit` | Quit |
 
@@ -161,6 +163,9 @@ Loads `.env` via `python-dotenv` using an explicit path relative to the file (`P
 - `list_files` — list directory contents
 
 Tools are defined as [OpenAI function calling](https://platform.openai.com/docs/guides/function-calling) schemas.
+
+### `src/nextjs.py`
+Scaffolds a Next.js 14 project with TypeScript and Tailwind CSS (App Router). Run `/create-nextjs my-app` to generate 10 files including `package.json`, `next.config.ts`, `tsconfig.json`, `app/layout.tsx`, `app/page.tsx`, and Tailwind/PostCSS config.
 
 ### `src/tui.py`
 The terminal UI built with `prompt_toolkit` and `rich`. Implements a tool-calling loop: send user message → AI responds or calls tools → execute tools → feed results back to AI → repeat until AI gives a final response.

@@ -15,6 +15,7 @@ modelscope-tui/
     ├── config.py             # loads .env via python-dotenv
     ├── client.py             # httpx-based Modelscope API client (OpenAI-compatible)
     ├── editor.py             # file tools: read, write, edit, delete, list
+    ├── nextjs.py             # Next.js project scaffolding
     └── tui.py                # prompt_toolkit + rich TUI with tool-calling loop
 ```
 
@@ -60,6 +61,12 @@ WORKSPACE_DIR=.                               # optional, defaults to cwd
 - `get_tool_definitions()` — returns OpenAI-compatible tool definitions for: read_file, write_file, edit_file, delete_file, list_files
 - `execute_tool(name, args)` — dispatches to the correct method via Python `match`
 
+### src/nextjs.py
+- `create_nextjs_project(base_dir, project_name)` — scaffolds a Next.js 14 project with TypeScript + Tailwind CSS (App Router)
+- Creates 10 files: `package.json`, `next.config.ts`, `tsconfig.json`, `postcss.config.mjs`, `tailwind.config.ts`, `.gitignore`, `app/layout.tsx`, `app/page.tsx`, `app/globals.css`, `public/.gitkeep`
+- Raises `FileExistsError` if target directory already exists
+- Private helpers `_package_json()`, `_next_config()`, `_tsconfig()`, etc. produce each file's content
+
 ### src/tui.py
 - Uses `prompt_toolkit.PromptSession` with `FileHistory(".chat_history")` and `rich.Console` for output
 - Starts by creating `ModelscopeClient` (catches ValueError for token issues) and `FileEditor`
@@ -68,11 +75,12 @@ WORKSPACE_DIR=.                               # optional, defaults to cwd
   - Empty input → skip
   - `/exit` — quit
   - `/check` — runs `client.check_connection()` and prints result
-  - `/help` — shows command list
+  - `/help` — shows command list (includes `/create-nextjs`)
   - `/clear` — resets conversation history (keeps system prompt)
   - `/tools` — lists available file tools
   - `/model <name>` — updates `MODELSCOPE_MODEL` env var and client.model
   - `/workspace <dir>` — updates `WORKSPACE_DIR` env var and editor.workspace
+  - `/create-nextjs [name]` — scaffolds a Next.js project in the current workspace (defaults to `my-app`), prints next steps
   - Everything else → sent as user message to the AI
 - Tool-calling inner loop:
   - Calls `client.chat()` with messages and tool definitions

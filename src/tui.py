@@ -9,6 +9,7 @@ from rich.panel import Panel
 from . import config
 from .client import ModelscopeClient
 from .editor import FileEditor
+from .nextjs import create_nextjs_project
 
 console = Console()
 style = Style.from_dict({"prompt": "ansicyan bold"})
@@ -71,6 +72,7 @@ def run() -> None:
                 "/exit    - quit\n"
                 "/check   - test API connection\n"
                 "/clear   - clear conversation\n"
+                "/create-nextjs [name] - scaffold a Next.js project\n"
                 "/model <name> - switch model\n"
                 "/tools   - show available tools\n"
                 "/workspace <dir> - change workspace\n"
@@ -106,6 +108,20 @@ def run() -> None:
                 os.environ["WORKSPACE_DIR"] = new_ws
                 editor.workspace = config.get_workspace()
                 console.print(f"Workspace changed to: {editor.workspace}")
+            continue
+
+        if cmd.startswith("/create-nextjs"):
+            parts = cmd.split(None, 1)
+            name = parts[1].strip() if len(parts) > 1 else "my-app"
+            try:
+                dest = create_nextjs_project(editor.workspace, name)
+                console.print(f"\n[bold green]Next.js project created at:[/bold green] {dest}")
+                console.print("\n[bold]To get started:[/bold]")
+                console.print(f"  cd {name}")
+                console.print("  npm install")
+                console.print("  npm run dev")
+            except (FileExistsError, OSError) as e:
+                console.print(f"\n[red]Error: {e}[/red]")
             continue
 
         messages.append({"role": "user", "content": cmd})
