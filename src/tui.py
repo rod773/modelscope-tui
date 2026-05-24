@@ -60,6 +60,24 @@ Commands that prompt for input will TIME OUT after 120 seconds. Always:
 - Example working gradient: stop-color="rgb(59,130,246)" to stop-color="rgb(34,211,238)"
 - Verify the SVG renders visibly before creating it.
 
+## SVG as page background in Next.js
+
+The CORRECT approach for an SVG page background:
+1. Place the SVG file in `public/` folder
+2. Add `background-image` CSS in `globals.css` (NOT via `<Image>` component):
+
+```css
+body {
+  background-image: url('/your-file.svg');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+```
+
+Or use a CSS class on a specific container — never use `<Image>` for backgrounds.
+Do NOT use both a CSS background AND an `<Image>` component for the same image.
+
 ## Example of correct workflow (follow this pattern)
 
 1. Run `list_files` to see the project structure

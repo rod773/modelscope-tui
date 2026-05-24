@@ -49,12 +49,15 @@ class FileEditor:
                         "use visible colors like rgb(59,130,246) / rgb(34,211,238) instead"
                     )
 
-        if ext in (".tsx", ".jsx", ".ts", ".js"):
-            p = Path(path)
-            if p.parent.stem != "app" and p.suffix in (".tsx", ".jsx"):
-                for pattern, msg in BAD_PATTERNS_IN_APP_ROUTER:
-                    if pattern in content and "layout.tsx" not in path:
-                        raise ValidationError(f"{msg}. File: {path}")
+        is_layout_tsx = Path(path).name == "layout.tsx"
+
+        if ext in (".tsx", ".jsx"):
+            for pattern, msg in BAD_PATTERNS_IN_APP_ROUTER:
+                if pattern in content:
+                    # <html>/<body> are only OK in layout.tsx
+                    if pattern in ("<html", "<body") and is_layout_tsx:
+                        continue
+                    raise ValidationError(f"{msg}. File: {path}")
 
     def read_file(self, path: str) -> str:
         full = self._resolve(path)
