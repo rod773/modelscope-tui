@@ -68,9 +68,22 @@ class FileEditor:
     def write_file(self, path: str, content: str) -> str:
         full = self._resolve(path)
         self._validate_content(path, content)
+
+        prefix = ""
+        if full.exists():
+            existing = full.read_text(encoding="utf-8")
+            prefix = f"NOTE: {full} already existed with {len(existing)} bytes. Overwriting it.\n---EXISTING CONTENT---\n{existing}\n---END EXISTING---\n"
+
+        sibling_lines = []
+        for entry in sorted(full.parent.iterdir()):
+            suffix = "/" if entry.is_dir() else ""
+            sibling_lines.append(f"  {entry.name}{suffix}")
+        if sibling_lines:
+            prefix += f"Other files in {full.parent}: \n" + "\n".join(sibling_lines) + "\n"
+
         full.parent.mkdir(parents=True, exist_ok=True)
         full.write_text(content, encoding="utf-8")
-        return f"Wrote {len(content)} bytes to {full}"
+        return f"{prefix}Wrote {len(content)} bytes to {full}"
 
     def edit_file(self, path: str, old_string: str, new_string: str) -> str:
         full = self._resolve(path)

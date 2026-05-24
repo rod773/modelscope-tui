@@ -78,6 +78,14 @@ body {
 Or use a CSS class on a specific container — never use `<Image>` for backgrounds.
 Do NOT use both a CSS background AND an `<Image>` component for the same image.
 
+## When you get a VALIDATION REJECTED error
+
+If a write or edit is rejected with "VALIDATION REJECTED:", STOP and read the error message.
+- First, use `read_file` to see the current file content
+- Then fix the specific issue mentioned in the error
+- Do NOT retry the same content — it will be rejected again
+- Do NOT switch to an entirely different approach unless you understand why the first attempt failed
+
 ## Example of correct workflow (follow this pattern)
 
 1. Run `list_files` to see the project structure
@@ -256,7 +264,10 @@ def run() -> None:
 
                 try:
                     result = editor.execute_tool(name, args)
-                    console.print(f"[dim]{result[:500]}[/dim]")
+                    if result.startswith("VALIDATION REJECTED:"):
+                        console.print(f"[bold red]{result}[/bold red]")
+                    else:
+                        console.print(f"[dim]{result[:500]}[/dim]")
                 except Exception as e:
                     result = f"Error: {e}"
                     console.print(f"[red]{result}[/red]")
