@@ -51,14 +51,16 @@ WORKSPACE_DIR=.                               # optional, defaults to cwd
 - `chat_stream(messages, tools=None)` — same but with `stream: True`, yields parsed JSON chunks from SSE `data:` lines
 
 ### src/editor.py
-- `FileEditor.__init__()` — sets workspace from config
+- `FileEditor.__init__(print_fn=None)` — sets workspace from config, stores optional print callback for streaming output
 - `_resolve(path)` — resolves relative paths against workspace, returns absolute `Path`
 - `read_file(path)` — raises FileNotFoundError if missing, returns content as string
 - `write_file(path, content)` — creates parent dirs, writes file, returns summary with byte count
 - `edit_file(path, old_string, new_string)` — replaces exact text (single occurrence), raises ValueError if not found or multiple matches
 - `delete_file(path)` — deletes file or empty directory, raises FileNotFoundError
 - `list_files(path=".")` — lists directory contents with `/` suffix for dirs
-- `get_tool_definitions()` — returns OpenAI-compatible tool definitions for: read_file, write_file, edit_file, delete_file, list_files
+- `run_command(command)` — executes a shell command via `subprocess.Popen` with `stdin=DEVNULL`, merges stderr→stdout, streams output line-by-line to `print_fn` in a daemon thread, enforces 120s timeout with clear error on hang
+- `create_nextjs_project(project_name)` — scaffolds Next.js 14 + TypeScript + Tailwind
+- `get_tool_definitions()` — returns OpenAI-compatible tool definitions for all 7 tools (read_file, write_file, edit_file, delete_file, list_files, run_command, create_nextjs_project)
 - `execute_tool(name, args)` — dispatches to the correct method via Python `match`
 
 ### src/nextjs.py
@@ -69,7 +71,12 @@ WORKSPACE_DIR=.                               # optional, defaults to cwd
 
 ### src/tui.py
 - Uses `prompt_toolkit.PromptSession` with `FileHistory(".chat_history")` and `rich.Console` for output
-- Starts by creating `ModelscopeClient` (catches ValueError for token issues) and `FileEditor`
+- Starts by creating `ModelscopeClient` (catches ValueError for token issues) and `FileEditor(print_fn=console.print)` — passes console.print to stream command output in real-time
+- SYSTEM_PROMPT constant (lines 18-63) instructs the AI to:
+  - Always inspect the project first (`list_files`, `read_file package.json`) before running commands
+  - Use `-y`/`--yes` flags to avoid interactive prompts that would hang
+  - For shadcn UI: check `components.json` first, use `npx shadcn add` instead of `init`
+  - Include a plan section with `[x]`/`[ ]` markers for multi-step tasks
 - Prints welcome panel with model name and workspace
 - Main loop:
   - Empty input → skip

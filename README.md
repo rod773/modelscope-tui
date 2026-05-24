@@ -21,9 +21,9 @@ modelscope-tui/
     ├── __init__.py
     ├── config.py             # loads .env via python-dotenv (explicit path, override mode)
     ├── client.py             # httpx client for Modelscope API (handles 401, 404)
-    ├── editor.py             # file tools (read/write/edit/delete/list)
+    ├── editor.py             # file tools + shell command execution + scaffolding
     ├── nextjs.py             # Next.js project scaffolding
-    └── tui.py                # terminal UI with tool-calling loop
+    └── tui.py                # terminal UI with tool-calling loop + system prompt
 ```
 
 **Data flow:**
@@ -33,7 +33,7 @@ You type a message
        ↓
   src/tui.py  ── API call ──→  Modelscope API (OpenAI-compatible)
        ↓                              ↓
-  If the AI calls a tool ──→   src/editor.py (read/write/edit/delete/list)
+  Tool call? ──────yes──────→  src/editor.py (file ops, shell commands, scaffolding)
        ↓                              ↓
   Tool result sent back ──→   AI processes result, may call more tools
        ↓
@@ -155,20 +155,35 @@ Loads `.env` via `python-dotenv` using an explicit path relative to the file (`P
 `ModelscopeClient` wraps the [OpenAI-compatible chat completions endpoint](https://api-inference.modelscope.ai/v1/chat/completions) using `httpx`. Includes `check_connection()` for diagnostics. Handles 401 errors (invalid token) and 404 errors (missing `/v1/` in base URL) with clear guidance.
 
 ### `src/editor.py`
-`FileEditor` provides five tools that the AI can call:
-- `read_file` — read file contents
-- `write_file` — create or overwrite a file
-- `edit_file` — replace exact text (single occurrence)
-- `delete_file` — delete a file or empty directory
-- `list_files` — list directory contents
+`FileEditor` provides seven tools that the AI can call:
+
+| Tool | Description |
+|---|---|
+| `read_file` | Read file contents |
+| `write_file` | Create or overwrite a file |
+| `edit_file` | Replace exact text (single occurrence) |
+| `delete_file` | Delete a file or empty directory |
+| `list_files` | List directory contents |
+| `run_command` | Execute shell commands — uses `subprocess.Popen` with `stdin=DEVNULL`, merges stderr→stdout, **streams output line-by-line in real-time** via a daemon thread, enforces 120s timeout with a clear error message on hang |
+| `create_nextjs_project` | Scaffold a Next.js 14 project with TypeScript + Tailwind |
 
 Tools are defined as [OpenAI function calling](https://platform.openai.com/docs/guides/function-calling) schemas.
+
+#### Command streaming
+When `run_command` is called, each line of stdout/stderr is printed to the terminal as it arrives (via `console.print`), so the user sees progress in real-time instead of waiting for the command to finish. If a command prompts for interactive input, it receives EOF immediately and will either fail fast or time out with a helpful message after 120 seconds.
 
 ### `src/nextjs.py`
 Scaffolds a Next.js 14 project with TypeScript and Tailwind CSS (App Router). Run `/create-nextjs my-app` to generate 10 files including `package.json`, `next.config.ts`, `tsconfig.json`, `app/layout.tsx`, `app/page.tsx`, and Tailwind/PostCSS config.
 
 ### `src/tui.py`
 The terminal UI built with `prompt_toolkit` and `rich`. Implements a tool-calling loop: send user message → AI responds or calls tools → execute tools → feed results back to AI → repeat until AI gives a final response.
+
+The system prompt (`SYSTEM_PROMPT` constant) includes critical rules that guide AI behavior:
+- **Inspect before acting** — always check project files (`package.json`, etc.) before running commands
+- **Avoid hangs** — always use `-y`/`--yes` flags since commands that prompt for input will time out
+- **Shadcn UI** — check for `components.json` first and use `npx shadcn add` if already initialized
+
+`FileEditor` is initialized with `print_fn=console.print` so command output streams to the terminal in real-time.
 
 ## License
 
