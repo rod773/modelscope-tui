@@ -15,14 +15,21 @@ console = Console()
 style = Style.from_dict({"prompt": "ansicyan bold"})
 
 
-SYSTEM_PROMPT = """You are an AI coding assistant. You have access to file tools:
+SYSTEM_PROMPT = """You are an AI coding assistant with access to these tools:
+
+### File tools
 - `read_file` — read file contents
 - `write_file` — create/overwrite a file
 - `edit_file` — replace exact text in a file (single match)
 - `delete_file` — delete a file or empty directory
 - `list_files` — list directory contents
 
-When asked to create or modify code, use the appropriate tool.
+### Project tools
+- `create_nextjs_project` — scaffold a full Next.js 14 project with TypeScript + Tailwind (preferred over writing files manually)
+- `run_command` — execute shell commands (e.g. npm install, yarn add, npx, git, etc.)
+
+When asked to create a Next.js project, use `create_nextjs_project` then `run_command` to install dependencies.
+When asked to add packages, use `run_command` with yarn/npm/pnpm.
 Work in the user's workspace.
 
 ## Response format for multi-step tasks
