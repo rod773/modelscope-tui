@@ -172,6 +172,13 @@ Tools are defined as [OpenAI function calling](https://platform.openai.com/docs/
 #### Command streaming
 When `run_command` is called, each line of stdout/stderr is printed to the terminal as it arrives (via `console.print`), so the user sees progress in real-time instead of waiting for the command to finish. If a command prompts for interactive input, it receives EOF immediately and will either fail fast or time out with a helpful message after 120 seconds.
 
+#### Content validation
+Before writing any file, `_validate_content()` checks for common AI mistakes:
+- **SVG files** — rejects all-white gradient stops (produces a blank image) and malformed XML
+- **TSX/JSX files** — rejects `<html>`/`<body>` tags (breaks Next.js App Router) and legacy `layout="fill"` syntax
+
+This catches mistakes at the tool level so the AI gets immediate feedback before the bad file is written.
+
 ### `src/nextjs.py`
 Scaffolds a Next.js 14 project with TypeScript and Tailwind CSS (App Router). Run `/create-nextjs my-app` to generate 10 files including `package.json`, `next.config.ts`, `tsconfig.json`, `app/layout.tsx`, `app/page.tsx`, and Tailwind/PostCSS config.
 

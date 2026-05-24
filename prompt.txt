@@ -53,15 +53,18 @@ WORKSPACE_DIR=.                               # optional, defaults to cwd
 ### src/editor.py
 - `FileEditor.__init__(print_fn=None)` — sets workspace from config, stores optional print callback for streaming output
 - `_resolve(path)` — resolves relative paths against workspace, returns absolute `Path`
+- `_validate_content(path, content)` — validates files before writing to catch common AI mistakes:
+  - SVG files: rejects all-white gradient stops (blank image) and malformed XML
+  - TSX/JSX files: rejects `<html>`/`<body>` tags (breaks Next.js App Router) and legacy `layout="fill"`
 - `read_file(path)` — raises FileNotFoundError if missing, returns content as string
-- `write_file(path, content)` — creates parent dirs, writes file, returns summary with byte count
-- `edit_file(path, old_string, new_string)` — replaces exact text (single occurrence), raises ValueError if not found or multiple matches
+- `write_file(path, content)` — validates content, creates parent dirs, writes file, returns summary with byte count
+- `edit_file(path, old_string, new_string)` — replaces exact text (single occurrence), validates new content, raises ValueError if not found or multiple matches
 - `delete_file(path)` — deletes file or empty directory, raises FileNotFoundError
 - `list_files(path=".")` — lists directory contents with `/` suffix for dirs
 - `run_command(command)` — executes a shell command via `subprocess.Popen` with `stdin=DEVNULL`, merges stderr→stdout, streams output line-by-line to `print_fn` in a daemon thread, enforces 120s timeout with clear error on hang
 - `create_nextjs_project(project_name)` — scaffolds Next.js 14 + TypeScript + Tailwind
 - `get_tool_definitions()` — returns OpenAI-compatible tool definitions for all 7 tools (read_file, write_file, edit_file, delete_file, list_files, run_command, create_nextjs_project)
-- `execute_tool(name, args)` — dispatches to the correct method via Python `match`
+- `execute_tool(name, args)` — dispatches to the correct method via Python `match`, catches `ValidationError` and returns it as a tool result
 
 ### src/nextjs.py
 - `create_nextjs_project(base_dir, project_name)` — scaffolds a Next.js 14 project with TypeScript + Tailwind CSS (App Router)
