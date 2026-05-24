@@ -36,17 +36,17 @@ WORKSPACE_DIR=.                               # optional, defaults to cwd
 - Package discovery: include `src*`
 
 ### src/config.py
-- Calls `load_dotenv()` at module level to load `.env`
+- Calls `load_dotenv()` with explicit path (`Path(__file__).resolve().parent.parent / ".env"`) and `override=True` — `.env` always wins over system env vars
 - `MODELSCOPE_TOKEN_URL = "https://modelscope.ai/my-access-token"` (constant, used in error messages)
 - `get_api_token()` — reads `MODELSCOPE_API_TOKEN`, validates it starts with `ms-`, raises ValueError if missing/invalid
-- `get_base_url()` — reads `MODELSCOPE_BASE_URL` defaulting to `https://api-inference.modelscope.ai/v1/`, ensures trailing `/`
+- `get_base_url()` — reads `MODELSCOPE_BASE_URL` defaulting to `https://api-inference.modelscope.ai/v1/`, strips trailing `/`, ensures `/v1/` suffix, returns with trailing `/`
 - `get_model()` — reads `MODELSCOPE_MODEL` defaulting to `Qwen/Qwen2.5-72B-Instruct`
 - `get_workspace()` — reads `WORKSPACE_DIR` defaulting to `.`, returns resolved `Path`
 
 ### src/client.py
 - `ModelscopeClient.__init__()` — gets token, base_url, model from config; creates `httpx.Client` with `Authorization: Bearer <token>` header and 120s timeout
 - `check_connection()` — sends a minimal chat request (1 token) and returns a diagnostic string with token preview, URL, model, HTTP status, and response body
-- `chat(messages, tools=None)` — POST to `chat/completions`; on 401, raises ValueError with the server's error message + link to get a new token; otherwise raises on HTTP errors and returns JSON
+- `chat(messages, tools=None)` — POST to `chat/completions`; on 401, raises ValueError with the server's error message + link to get a new token; on 404, raises ValueError suggesting to check `/v1/` in base URL; otherwise raises on HTTP errors and returns JSON
 - `chat_stream(messages, tools=None)` — same but with `stream: True`, yields parsed JSON chunks from SSE `data:` lines
 
 ### src/editor.py

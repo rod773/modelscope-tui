@@ -3,7 +3,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-load_dotenv()
+dotenv_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=dotenv_path, override=True)
 
 
 # Use .ai for international users, .cn for mainland China
@@ -27,10 +28,13 @@ def get_api_token() -> str:
 
 
 def get_base_url() -> str:
-    return os.getenv(
+    url = os.getenv(
         "MODELSCOPE_BASE_URL",
         "https://api-inference.modelscope.ai/v1/",
-    ).rstrip("/") + "/"
+    ).rstrip("/")
+    if not url.endswith("/v1"):
+        url += "/v1"
+    return url + "/"
 
 
 def get_model() -> str:

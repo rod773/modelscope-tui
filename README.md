@@ -10,6 +10,7 @@ This project was created entirely through a conversation with an AI agent (openc
 
 ```
 modelscope-tui/
+├── .env                      # user configuration (gitignored)
 ├── .env.example              # template for environment variables
 ├── main.py                   # entry point
 ├── pyproject.toml            # packaging and dependencies
@@ -18,8 +19,8 @@ modelscope-tui/
 ├── prompt.txt                # the original build prompt
 └── src/
     ├── __init__.py
-    ├── config.py             # loads .env via python-dotenv
-    ├── client.py             # httpx client for Modelscope API
+    ├── config.py             # loads .env via python-dotenv (explicit path, override mode)
+    ├── client.py             # httpx client for Modelscope API (handles 401, 404)
     ├── editor.py             # file tools (read/write/edit/delete/list)
     └── tui.py                # terminal UI with tool-calling loop
 ```
@@ -77,6 +78,8 @@ WORKSPACE_DIR=.
 | `WORKSPACE_DIR` | Working directory for file ops | `.` |
 
 > For users in mainland China, use `.cn` instead of `.ai` in the base URL.
+
+> **Note:** System environment variables do NOT override `.env` — the project always loads `.env` from its own directory with `override=True`. This ensures portable behavior across terminals.
 
 ### 3. Install
 
@@ -144,10 +147,10 @@ Done! Updated hello.py.
 ## Project details
 
 ### `src/config.py`
-Loads `.env` via `python-dotenv` and provides typed getters for all configuration values. Validates that the API token starts with `ms-`.
+Loads `.env` via `python-dotenv` using an explicit path relative to the file (`Path(__file__).resolve().parent.parent / ".env"`) with `override=True`, so `.env` always takes precedence over system environment variables. Provides typed getters for all configuration values. `get_base_url()` ensures the URL ends with `/v1/`. Validates that the API token starts with `ms-`.
 
 ### `src/client.py`
-`ModelscopeClient` wraps the [OpenAI-compatible chat completions endpoint](https://api-inference.modelscope.ai/v1/chat/completions) using `httpx`. Includes `check_connection()` for diagnostics and handles 401 errors with clear guidance.
+`ModelscopeClient` wraps the [OpenAI-compatible chat completions endpoint](https://api-inference.modelscope.ai/v1/chat/completions) using `httpx`. Includes `check_connection()` for diagnostics. Handles 401 errors (invalid token) and 404 errors (missing `/v1/` in base URL) with clear guidance.
 
 ### `src/editor.py`
 `FileEditor` provides five tools that the AI can call:

@@ -52,6 +52,12 @@ class ModelscopeClient:
                 f"API response: {detail}\n"
                 f"Get a new token at: {config.MODELSCOPE_TOKEN_URL}"
             )
+        if resp.status_code == 404:
+            raise ValueError(
+                f"404 Not Found. Check that MODELSCOPE_BASE_URL includes /v1/.\n"
+                f"Current base URL: {self.base_url}\n"
+                f"Full URL: {resp.url}"
+            )
         resp.raise_for_status()
         return resp.json()
 
