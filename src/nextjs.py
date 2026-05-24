@@ -20,7 +20,7 @@ def create_nextjs_project(base_dir: str, project_name: str) -> str:
 def _get_project_files(project_name: str) -> dict[str, str]:
     return {
         "package.json": _package_json(project_name),
-        "next.config.ts": _next_config(),
+        "next.config.mjs": _next_config(),
         "tsconfig.json": _tsconfig(),
         "postcss.config.mjs": _postcss_config(),
         "tailwind.config.ts": _tailwind_config(),
@@ -67,7 +67,7 @@ def _next_config() -> str:
 /** @type {import('next').NextConfig} */
 const nextConfig = {};
 
-module.exports = nextConfig;
+export default nextConfig;
 """
 
 
