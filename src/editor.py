@@ -1,13 +1,15 @@
 import os
 import subprocess
+import threading
 from pathlib import Path
 from . import config
 from .nextjs import create_nextjs_project as _scaffold_nextjs
 
 
 class FileEditor:
-    def __init__(self):
+    def __init__(self, print_fn=None):
         self.workspace = config.get_workspace()
+        self.print_fn = print_fn
 
     def _resolve(self, path: str) -> Path:
         p = Path(path)
@@ -61,16 +63,48 @@ class FileEditor:
         return "\n".join(lines)
 
     def run_command(self, command: str) -> str:
-        result = subprocess.run(
+        process = subprocess.Popen(
             command,
             shell=True,
-            capture_output=True,
-            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
             cwd=self.workspace,
-            timeout=120,
+            text=True,
+            bufsize=1,
         )
-        output = result.stdout + result.stderr
-        return output or "(no output)"
+
+        output_lines = []
+        lock = threading.Lock()
+        timeout = 120
+
+        def read_stream():
+            try:
+                for line in iter(process.stdout.readline, ""):
+                    with lock:
+                        output_lines.append(line)
+                    if self.print_fn:
+                        self.print_fn(line.rstrip())
+            except ValueError:
+                pass
+            finally:
+                if process.stdout:
+                    process.stdout.close()
+
+        reader = threading.Thread(target=read_stream, daemon=True)
+        reader.start()
+
+        try:
+            process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+            return "Error: Command timed out after 120 seconds (likely waiting for interactive input). Always use non-interactive flags like -y or --yes."
+        finally:
+            reader.join(timeout=3)
+
+        with lock:
+            return "".join(output_lines) or "(no output)"
 
     def create_nextjs_project(self, project_name: str) -> str:
         dest = _scaffold_nextjs(str(self.workspace), project_name)
@@ -168,11 +202,11 @@ class FileEditor:
                 "type": "function",
                 "function": {
                     "name": "run_command",
-                    "description": "Execute a shell command in the workspace directory (e.g. npm install, yarn add, npx, git)",
+                    "description": "Execute a shell command in the workspace directory (e.g. npm install, yarn add, npx, git). IMPORTANT: commands that prompt for input will time out — always include -y/--yes flags.",
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "command": {"type": "string", "description": "Shell command to run"},
+                            "command": {"type": "string", "description": "Shell command to run (include -y or --yes flags to avoid interactive prompts)"},
                         },
                         "required": ["command"],
                     },

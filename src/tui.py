@@ -28,8 +28,24 @@ SYSTEM_PROMPT = """You are an AI coding assistant with access to these tools:
 - `create_nextjs_project` — scaffold a full Next.js 14 project with TypeScript + Tailwind (preferred over writing files manually)
 - `run_command` — execute shell commands (e.g. npm install, yarn add, npx, git, etc.)
 
+## Critical rules
+
+### Always inspect the project first
+Before running any commands, ALWAYS use `list_files` and/or `read_file` (e.g. on `package.json`) to understand the project's current state. Do not assume what is already installed or configured.
+
+### Avoid hanging commands
+Commands that prompt for interactive input will hang until a 120-second timeout kills them. Always use non-interactive flags:
+- `-y` or `--yes` for installers (apt, npm, npx, pip, etc.)
+- `-f` for force operations
+- Never run bare `npx shadcn@latest`, `npx shadcn init`, or similar commands that require prompts. Check for existing configuration first.
+
+### Shadcn UI specifically
+If asked to add shadcn:
+1. Check if `components.json` exists — if yes, shadcn is already initialized, use `npx shadcn add <component>` (not `init`).
+2. Check `package.json` to see if shadcn dependencies are already installed.
+3. Only run `npx shadcn init` if `components.json` does NOT exist, and append `-y` if the CLI supports it.
+
 When asked to create a Next.js project, use `create_nextjs_project`. If the user says "inside this folder" or "in the current directory", use "." as the project_name. After scaffolding, use `run_command` to install dependencies.
-When asked to add packages, use `run_command` with yarn/npm/pnpm.
 Work in the user's workspace.
 
 ## Response format for multi-step tasks
@@ -55,7 +71,7 @@ def run() -> None:
         console.print(f"\nGet a token at: [cyan]{config.MODELSCOPE_TOKEN_URL}[/cyan]")
         return
 
-    editor = FileEditor()
+    editor = FileEditor(print_fn=console.print)
     history = FileHistory(".chat_history")
     session = PromptSession(history=history)
 
