@@ -1,6 +1,8 @@
 import os
+import subprocess
 from pathlib import Path
 from . import config
+from .nextjs import create_nextjs_project as _scaffold_nextjs
 
 
 class FileEditor:
@@ -57,6 +59,22 @@ class FileEditor:
             suffix = "/" if entry.is_dir() else ""
             lines.append(f"{entry.name}{suffix}")
         return "\n".join(lines)
+
+    def run_command(self, command: str) -> str:
+        result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            cwd=self.workspace,
+            timeout=120,
+        )
+        output = result.stdout + result.stderr
+        return output or "(no output)"
+
+    def create_nextjs_project(self, project_name: str) -> str:
+        dest = _scaffold_nextjs(str(self.workspace), project_name)
+        return f"Next.js project created at {dest}\n\nTo install dependencies run:\n  cd {project_name}\n  npm install\n  npm run dev"
 
     def get_tool_definitions(self) -> list[dict]:
         return [
@@ -132,6 +150,34 @@ class FileEditor:
                     },
                 },
             },
+            {
+                "type": "function",
+                "function": {
+                    "name": "create_nextjs_project",
+                    "description": "Scaffold a Next.js 14 project with TypeScript and Tailwind CSS in the workspace",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "project_name": {"type": "string", "description": "Directory name for the project"},
+                        },
+                        "required": ["project_name"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "run_command",
+                    "description": "Execute a shell command in the workspace directory (e.g. npm install, yarn add, npx, git)",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "command": {"type": "string", "description": "Shell command to run"},
+                        },
+                        "required": ["command"],
+                    },
+                },
+            },
         ]
 
     def execute_tool(self, name: str, args: dict) -> str:
@@ -146,5 +192,9 @@ class FileEditor:
                 return self.delete_file(args["path"])
             case "list_files":
                 return self.list_files(args.get("path", "."))
+            case "create_nextjs_project":
+                return self.create_nextjs_project(args["project_name"])
+            case "run_command":
+                return self.run_command(args["command"])
             case _:
                 raise ValueError(f"Unknown tool: {name}")
